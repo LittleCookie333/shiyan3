@@ -1,0 +1,173 @@
+<!-- src/main/resources/static/index.html -->
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人通讯录</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        input {
+            margin: 0 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background: white;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .edit-btn, .delete-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .edit-btn:hover {
+            background-color: #0056b3;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+        }
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
+        .message {
+            text-align: center;
+            margin: 10px 0;
+            color: #28a745;
+        }
+    </style>
+</head>
+<body>
+<h1>个人通讯录</h1>
+<form id="contactForm">
+    <input type="text" id="name" placeholder="姓名" required>
+    <input type="text" id="address" placeholder="住址" required>
+    <input type="text" id="phone" placeholder="电话" required>
+    <button type="submit">添加联系人</button>
+</form>
+<div class="message" id="message"></div>
+<ul id="contactList"></ul>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    let editingContactId = null;
+
+    $(document).ready(function() {
+        loadContacts();
+
+        $('#contactForm').on('submit', function(e) {
+            e.preventDefault();
+            const contact = {
+                name: $('#name').val(),
+                address: $('#address').val(),
+                phone: $('#phone').val()
+            };
+
+            if (editingContactId) {
+                $.ajax({
+                    url: `/api/contacts/${editingContactId}`,
+                    type: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(contact),
+                    success: function() {
+                        loadContacts();
+                        $('#contactForm')[0].reset();
+                        $('#message').text('联系人已更新！');
+                        editingContactId = null;
+                    }
+                });
+            } else {
+                $.ajax({
+                    url: '/api/contacts',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(contact),
+                    success: function() {
+                        loadContacts();
+                        $('#contactForm')[0].reset();
+                        $('#message').text('联系人已添加！');
+                    }
+                });
+            }
+        });
+    });
+
+    function loadContacts() {
+        $.get('/api/contacts', function(contacts) {
+            $('#contactList').empty();
+            contacts.forEach(contact => {
+                $('#contactList').append(`
+                        <li>
+                            ${contact.name} - ${contact.address} - ${contact.phone}
+                            <div>
+                                <button class="edit-btn" onclick="editContact(${contact.id})">编辑</button>
+                                <button class="delete-btn" onclick="deleteContact(${contact.id})">删除</button>
+                            </div>
+                        </li>
+                    `);
+            });
+        });
+    }
+
+    function editContact(id) {
+        $.get(`/api/contacts/${id}`, function(contact) {
+            $('#name').val(contact.name);
+            $('#address').val(contact.address);
+            $('#phone').val(contact.phone);
+            editingContactId = id;
+            $('#message').text('');
+        });
+    }
+
+    function deleteContact(id) {
+        $.ajax({
+            url: `/api/contacts/${id}`,
+            type: 'DELETE',
+            success: function() {
+                loadContacts();
+                $('#message').text('联系人已删除！');
+            }
+        });
+    }
+</script>
+</body>
+</html>
